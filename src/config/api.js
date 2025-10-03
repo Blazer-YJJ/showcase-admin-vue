@@ -27,6 +27,14 @@ export const API_CONFIG = {
   }
 }
 
+// 导入认证管理
+import { authManager } from '../utils/auth.js'
+
+// 获取带认证的请求头
+const getAuthHeaders = () => {
+  return authManager.getHeaders()
+}
+
 // 获取完整的API URL
 export const getApiUrl = (path = '') => {
   // 确保path以/开头
@@ -42,7 +50,7 @@ export const adminApi = {
       const url = getApiUrl(`/admins?page=${page}&limit=${limit}`)
       const response = await fetch(url, {
         method: 'GET',
-        headers: API_CONFIG.HEADERS,
+        headers: getAuthHeaders(),
       })
       return await response.json()
     } catch (error) {
@@ -56,7 +64,7 @@ export const adminApi = {
       const url = getApiUrl('/admins')
       const response = await fetch(url, {
         method: 'POST',
-        headers: API_CONFIG.HEADERS,
+        headers: getAuthHeaders(),
         body: JSON.stringify(adminData),
       })
       return await response.json()
@@ -71,7 +79,7 @@ export const adminApi = {
       const url = getApiUrl(`/admins/${id}`)
       const response = await fetch(url, {
         method: 'PUT',
-        headers: API_CONFIG.HEADERS,
+        headers: getAuthHeaders(),
         body: JSON.stringify(adminData),
       })
       return await response.json()
@@ -86,11 +94,72 @@ export const adminApi = {
       const url = getApiUrl(`/admins/${id}`)
       const response = await fetch(url, {
         method: 'DELETE',
-        headers: API_CONFIG.HEADERS,
+        headers: getAuthHeaders(),
       })
       return await response.json()
     } catch (error) {
       throw new Error(`删除管理员失败: ${error.message}`)
+    }
+  }
+}
+
+// 会员相关 API 函数
+export const userApi = {
+  // 获取会员列表
+  async getUsers(page = 1, limit = 10) {
+    try {
+      const url = getApiUrl(`/users?page=${page}&limit=${limit}`)
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      })
+      return await response.json()
+    } catch (error) {
+      throw new Error(`获取会员列表失败: ${error.message}`)
+    }
+  },
+
+  // 创建会员
+  async createUser(userData) {
+    try {
+      const url = getApiUrl('/users')
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(userData),
+      })
+      return await response.json()
+    } catch (error) {
+      throw new Error(`创建会员失败: ${error.message}`)
+    }
+  },
+
+  // 更新会员信息
+  async updateUser(id, userData) {
+    try {
+      const url = getApiUrl(`/users/${id}`)
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(userData),
+      })
+      return await response.json()
+    } catch (error) {
+      throw new Error(`更新会员失败: ${error.message}`)
+    }
+  },
+
+  // 删除会员
+  async deleteUser(id) {
+    try {
+      const url = getApiUrl(`/users/${id}`)
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      })
+      return await response.json()
+    } catch (error) {
+      throw new Error(`删除会员失败: ${error.message}`)
     }
   }
 }
