@@ -164,5 +164,66 @@ export const userApi = {
   }
 }
 
+// 分类相关 API 函数
+export const categoryApi = {
+  // 获取分类列表
+  async getCategories() {
+    try {
+      const url = getApiUrl('/categories/all')
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      })
+      return await response.json()
+    } catch (error) {
+      throw new Error(`获取分类列表失败: ${error.message}`)
+    }
+  },
+
+  // 创建分类
+  async createCategory(categoryData) {
+    try {
+      const url = getApiUrl('/categories')
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(categoryData),
+      })
+      return await response.json()
+    } catch (error) {
+      throw new Error(`创建分类失败: ${error.message}`)
+    }
+  },
+
+  // 更新分类信息
+  async updateCategory(id, categoryData) {
+    try {
+      const url = getApiUrl(`/categories/${id}`)
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(categoryData),
+      })
+      return await response.json()
+    } catch (error) {
+      throw new Error(`更新分类失败: ${error.message}`)
+    }
+  },
+
+  // 删除分类
+  async deleteCategory(id) {
+    try {
+      const url = getApiUrl(`/categories/${id}`)
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      })
+      return await response.json()
+    } catch (error) {
+      throw new Error(`删除分类失败: ${error.message}`)
+    }
+  }
+}
+
 // 默认导出配置
 export default API_CONFIG
