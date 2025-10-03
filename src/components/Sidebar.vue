@@ -15,6 +15,12 @@
         :collapse="false"
         router
       >
+        <!-- 控制台 -->
+        <el-menu-item index="/dashboard">
+          <el-icon><House /></el-icon>
+          <span>控制台</span>
+        </el-menu-item>
+
         <!-- 账户管理 -->
         <el-sub-menu index="account">
           <template #title>
@@ -74,6 +80,22 @@
           <el-menu-item index="/feedback">意见反馈</el-menu-item>
         </el-sub-menu>
       </el-menu>
+      
+      <!-- 用户信息和退出 -->
+      <div class="user-section">
+        <div class="user-info">
+          <div class="user-avatar">
+            <el-icon><User /></el-icon>
+          </div>
+          <div class="user-details">
+            <div class="username">{{ user?.username || '管理员' }}</div>
+            <div class="user-status">在线</div>
+          </div>
+        </div>
+        <el-button type="danger" size="small" @click="handleLogout" class="logout-btn">
+          退出
+        </el-button>
+      </div>
     </el-aside>
 
     <!-- 移动端抽屉 -->
@@ -94,6 +116,12 @@
           router
           @select="handleMenuSelect"
         >
+          <!-- 控制台 -->
+          <el-menu-item index="/dashboard">
+            <el-icon><House /></el-icon>
+            <span>控制台</span>
+          </el-menu-item>
+
           <!-- 账户管理 -->
           <el-sub-menu index="account">
             <template #title>
@@ -153,6 +181,22 @@
             <el-menu-item index="/feedback">意见反馈</el-menu-item>
           </el-sub-menu>
         </el-menu>
+
+        <!-- 移动端用户信息和退出 -->
+        <div class="user-section mobile-user-section">
+          <div class="user-info">
+            <div class="user-avatar">
+              <el-icon><User /></el-icon>
+            </div>
+            <div class="user-details">
+              <div class="username">{{ user?.username || '管理员' }}</div>
+              <div class="user-status">在线</div>
+            </div>
+          </div>
+          <el-button type="danger" size="small" @click="handleLogout" class="logout-btn">
+            退出
+          </el-button>
+        </div>
       </div>
     </el-drawer>
   </div>
@@ -160,10 +204,14 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { User, Avatar, Document, Box, Setting } from '@element-plus/icons-vue'
+import { useRoute, useRouter } from 'vue-router'
+import { House, User, Avatar, Document, Box, Setting } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { useAuth } from '../utils/auth.js'
 
 const route = useRoute()
+const router = useRouter()
+const { user, logout } = useAuth()
 const drawerVisible = ref(false)
 const isMobile = ref(false)
 
@@ -177,6 +225,26 @@ const handleMenuSelect = () => {
   // 移动端选择菜单后关闭抽屉
   if (isMobile.value) {
     drawerVisible.value = false
+  }
+}
+
+const handleLogout = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '确认退出登录吗？',
+      '提示',
+      {
+        confirmButtonText: '确认',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+    
+    logout()
+    ElMessage.success('已退出登录')
+    router.push('/login')
+  } catch {
+    // 用户取消操作
   }
 }
 
@@ -211,6 +279,8 @@ defineExpose({
   height: 100vh;
   overflow: hidden;
   border-right: 1px solid #e4e7ed;
+  display: flex;
+  flex-direction: column;
 }
 
 .mobile-drawer .el-drawer__body {
@@ -221,6 +291,8 @@ defineExpose({
   height: 100%;
   background-color: #ffffff;
   border-right: 1px solid #e4e7ed;
+  display: flex;
+  flex-direction: column;
 }
 
 .logo {
@@ -243,7 +315,7 @@ defineExpose({
 .sidebar-menu {
   border: none;
   background-color: #ffffff;
-  height: calc(100vh - 60px);
+  flex: 1;
   overflow-y: auto;
 }
 
@@ -278,6 +350,59 @@ defineExpose({
   background-color: #ecf5ff;
   color: #409eff;
   border-right: 3px solid #409eff;
+}
+
+/* 用户信息区域 */
+.user-section {
+  padding: 16px 20px;
+  border-top: 1px solid #e4e7ed;
+  background-color: #fafafa;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  color: white;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.username {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.user-status {
+  font-size: 12px;
+  color: #67c23a;
+}
+
+.logout-btn {
+  font-size: 12px;
+  padding: 6px 12px;
+}
+
+.mobile-user-section {
+  margin-top: auto;
 }
 
 /* 移动端样式 */

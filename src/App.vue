@@ -8,30 +8,44 @@
 -->
 <template>
   <div id="app">
-    <!-- 移动端头部 -->
-    <MobileHeader @toggle-sidebar="handleToggleSidebar" />
+    <!-- 登录页面独立布局 -->
+    <div v-if="isLoginPage" class="login-layout">
+      <router-view />
+    </div>
     
-    <!-- 主布局容器 -->
-    <el-container class="main-container">
-      <!-- 侧边栏 -->
-      <Sidebar ref="sidebarRef" />
+    <!-- 主系统布局 -->
+    <div v-else class="main-layout">
+      <!-- 移动端头部 -->
+      <MobileHeader @toggle-sidebar="handleToggleSidebar" />
       
-      <!-- 主内容区域 -->
-      <el-main class="main-content">
-        <router-view />
-      </el-main>
-    </el-container>
+      <!-- 主布局容器 -->
+      <el-container class="main-container">
+        <!-- 侧边栏 -->
+        <Sidebar ref="sidebarRef" />
+        
+        <!-- 主内容区域 -->
+        <el-main class="main-content">
+          <router-view />
+        </el-main>
+      </el-container>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import Sidebar from './components/Sidebar.vue'
 import MobileHeader from './components/MobileHeader.vue'
 
 const router = useRouter()
+const route = useRoute()
 const sidebarRef = ref(null)
+
+// 计算是否为登录页面
+const isLoginPage = computed(() => {
+  return route.path === '/login'
+})
 
 const handleToggleSidebar = () => {
   if (sidebarRef.value) {
@@ -44,6 +58,18 @@ const handleToggleSidebar = () => {
 #app {
   height: 100vh;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* 登录页面布局 */
+.login-layout {
+  height: 100vh;
+  width: 100%;
+}
+
+/* 主系统布局 */
+.main-layout {
+  height: 100vh;
+  width: 100%;
 }
 
 .main-container {
