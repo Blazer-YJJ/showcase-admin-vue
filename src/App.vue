@@ -1,109 +1,76 @@
+<!--
+ * @Author: JingChengCool jingchengcool@outlook.com
+ * @Date: 2025-10-01 00:04:15
+ * @LastEditors: JingChengCool jingchengcool@outlook.com
+ * @LastEditTime: 2025-10-03 07:55:18
+ * @FilePath: \showcase-admin-vue\src\App.vue
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+-->
 <template>
   <div id="app">
-    <header>
-      <h1>Vue 3 空白项目</h1>
-      <p>欢迎使用 Vue 3 + Vite 构建的项目</p>
-    </header>
+    <!-- 移动端头部 -->
+    <MobileHeader @toggle-sidebar="handleToggleSidebar" />
     
-    <main>
-      <div class="welcome-card">
-        <h2>开始开发</h2>
-        <p>这是一个基本的 Vue 3 项目模板，您可以在此基础上开始构建您的应用。</p>
-        <button @click="showMessage" class="btn">点击我</button>
-        <p v-if="message" class="message">{{ message }}</p>
-      </div>
-    </main>
+    <!-- 主布局容器 -->
+    <el-container class="main-container">
+      <!-- 侧边栏 -->
+      <Sidebar ref="sidebarRef" />
+      
+      <!-- 主内容区域 -->
+      <el-main class="main-content">
+        <router-view />
+      </el-main>
+    </el-container>
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import Sidebar from './components/Sidebar.vue'
+import MobileHeader from './components/MobileHeader.vue'
 
-export default {
-  name: 'App',
-  setup() {
-    const message = ref('')
-    
-    const showMessage = () => {
-      message.value = 'Hello Vue 3! 🎉'
-    }
-    
-    return {
-      message,
-      showMessage
-    }
+const router = useRouter()
+const sidebarRef = ref(null)
+
+const handleToggleSidebar = () => {
+  if (sidebarRef.value) {
+    sidebarRef.value.openDrawer()
   }
 }
 </script>
 
 <style scoped>
 #app {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
+  height: 100vh;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-header {
-  text-align: center;
-  margin-bottom: 40px;
-  padding: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border-radius: 10px;
+.main-container {
+  height: 100vh;
 }
 
-header h1 {
-  margin: 0 0 10px 0;
-  font-size: 2.5rem;
+.main-content {
+  background-color: #f5f5f5;
+  padding: 0;
+  overflow-y: auto;
 }
 
-header p {
-  margin: 0;
-  font-size: 1.2rem;
-  opacity: 0.9;
+/* 移动端样式调整 */
+@media (max-width: 767px) {
+  .main-container {
+    height: calc(100vh - 60px);
+  }
+  
+  .main-content {
+    height: 100%;
+  }
 }
 
-.welcome-card {
-  background: white;
-  padding: 30px;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  text-align: center;
-}
-
-.welcome-card h2 {
-  color: #333;
-  margin-bottom: 20px;
-}
-
-.welcome-card p {
-  color: #666;
-  line-height: 1.6;
-  margin-bottom: 20px;
-}
-
-.btn {
-  background: #667eea;
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: background 0.3s ease;
-}
-
-.btn:hover {
-  background: #5a6fd8;
-}
-
-.message {
-  margin-top: 20px;
-  padding: 10px;
-  background: #e8f5e8;
-  color: #2d5a2d;
-  border-radius: 5px;
-  font-weight: bold;
+/* PC端样式调整 */
+@media (min-width: 768px) {
+  .main-content {
+    margin-left: 0;
+  }
 }
 </style>
