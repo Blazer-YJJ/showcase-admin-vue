@@ -42,6 +42,18 @@ export const getApiUrl = (path = '') => {
   return `${API_CONFIG.BASE_URL}${API_CONFIG.VERSION}${normalizedPath}`
 }
 
+// 获取完整的图片URL
+export const getImageUrl = (imagePath = '') => {
+  if (!imagePath) return ''
+  // 如果已经是完整URL，直接返回
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath
+  }
+  // 确保path以/开头
+  const normalizedPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`
+  return `${API_CONFIG.BASE_URL}${normalizedPath}`
+}
+
 // 管理员相关 API 函数
 export const adminApi = {
   // 获取管理员列表
@@ -180,6 +192,20 @@ export const categoryApi = {
     }
   },
 
+  // 获取分类树结构
+  async getCategoryTree() {
+    try {
+      const url = getApiUrl('/categories/tree')
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      })
+      return await response.json()
+    } catch (error) {
+      throw new Error(`获取分类树失败: ${error.message}`)
+    }
+  },
+
   // 创建分类
   async createCategory(categoryData) {
     try {
@@ -221,6 +247,134 @@ export const categoryApi = {
       return await response.json()
     } catch (error) {
       throw new Error(`删除分类失败: ${error.message}`)
+    }
+  }
+}
+
+// 商品相关 API 函数
+export const productApi = {
+  // 获取商品列表
+  async getProducts(page = 1, limit = 10) {
+    try {
+      const url = getApiUrl(`/products?page=${page}&limit=${limit}`)
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      })
+      return await response.json()
+    } catch (error) {
+      throw new Error(`获取商品列表失败: ${error.message}`)
+    }
+  },
+
+  // 创建商品（使用form-data格式）
+  async createProduct(productData) {
+    try {
+      const url = getApiUrl('/products')
+      
+      // 创建FormData对象
+      const formData = new FormData()
+      
+      // 添加商品基本信息
+      if (productData.name) formData.append('name', productData.name)
+      if (productData.description) formData.append('description', productData.description)
+      if (productData.price) formData.append('price', productData.price)
+      if (productData.category_id) formData.append('category_id', productData.category_id)
+      if (productData.tags) formData.append('tags', productData.tags)
+      if (productData.params) formData.append('params', productData.params)
+      
+      // 添加商品图片
+      if (productData.images && productData.images.length > 0) {
+        productData.images.forEach((image, index) => {
+          formData.append(`images`, image)
+        })
+      }
+      
+      // 获取认证头，但不设置Content-Type（让浏览器自动设置multipart/form-data）
+      const authHeaders = getAuthHeaders()
+      delete authHeaders['Content-Type'] // 删除Content-Type，让浏览器自动设置
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: authHeaders,
+        body: formData,
+      })
+      return await response.json()
+    } catch (error) {
+      throw new Error(`创建商品失败: ${error.message}`)
+    }
+  },
+
+  // 更新商品信息
+  async updateProduct(id, productData) {
+    try {
+      const url = getApiUrl(`/products/${id}`)
+      
+      // 如果有文件上传，使用FormData
+      if (productData.images && productData.images.length > 0) {
+        const formData = new FormData()
+        
+        // 添加商品基本信息
+        if (productData.name) formData.append('name', productData.name)
+        if (productData.description) formData.append('description', productData.description)
+        if (productData.price) formData.append('price', productData.price)
+        if (productData.category_id) formData.append('category_id', productData.category_id)
+        if (productData.tags) formData.append('tags', productData.tags)
+        if (productData.params) formData.append('params', productData.params)
+        
+        // 添加商品图片
+        productData.images.forEach((image, index) => {
+          formData.append(`images`, image)
+        })
+        
+        const authHeaders = getAuthHeaders()
+        delete authHeaders['Content-Type']
+        
+        const response = await fetch(url, {
+          method: 'PUT',
+          headers: authHeaders,
+          body: formData,
+        })
+        return await response.json()
+      } else {
+        // 没有文件上传，使用JSON格式
+        const response = await fetch(url, {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(productData),
+        })
+        return await response.json()
+      }
+    } catch (error) {
+      throw new Error(`更新商品失败: ${error.message}`)
+    }
+  },
+
+  // 获取商品详情
+  async getProductDetail(id) {
+    try {
+      const url = getApiUrl(`/products/${id}`)
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      })
+      return await response.json()
+    } catch (error) {
+      throw new Error(`获取商品详情失败: ${error.message}`)
+    }
+  },
+
+  // 删除商品
+  async deleteProduct(id) {
+    try {
+      const url = getApiUrl(`/products/${id}`)
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      })
+      return await response.json()
+    } catch (error) {
+      throw new Error(`删除商品失败: ${error.message}`)
     }
   }
 }
