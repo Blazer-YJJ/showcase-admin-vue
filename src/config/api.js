@@ -2,7 +2,7 @@
  * @Author: JingChengCool jingchengcool@outlook.com
  * @Date: 2025-10-03 09:16:40
  * @LastEditors: JingChengCool jingchengcool@outlook.com
- * @LastEditTime: 2025-10-03 11:03:49
+ * @LastEditTime: 2025-10-04 22:14:21
  * @FilePath: \showcase-admin-vue\src\config\api.js
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -375,6 +375,168 @@ export const productApi = {
       return await response.json()
     } catch (error) {
       throw new Error(`删除商品失败: ${error.message}`)
+    }
+  }
+}
+
+// 精品推荐相关 API 函数
+export const featuredRecommendationsApi = {
+  // 获取精品推荐列表
+  async getFeaturedRecommendations() {
+    try {
+      const url = getApiUrl('/explore-selections')
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      })
+      return await response.json()
+    } catch (error) {
+      throw new Error(`获取精品推荐列表失败: ${error.message}`)
+    }
+  },
+
+  // 添加商品到精品推荐（单个）
+  async addToFeaturedRecommendations(productId, sortOrder = 0) {
+    try {
+      const url = getApiUrl('/explore-selections')
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          product_id: productId,
+          sort_order: sortOrder
+        }),
+      })
+      return await response.json()
+    } catch (error) {
+      throw new Error(`添加精品推荐失败: ${error.message}`)
+    }
+  },
+
+  // 批量添加商品到精品推荐
+  async addMultipleToFeaturedRecommendations(productIds, sortOrderStart = 0) {
+    try {
+      const url = getApiUrl('/explore-selections')
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          product_ids: productIds,
+          sort_order_start: sortOrderStart
+        }),
+      })
+      return await response.json()
+    } catch (error) {
+      throw new Error(`批量添加精品推荐失败: ${error.message}`)
+    }
+  },
+
+  // 更新精品推荐排序
+  async updateFeaturedRecommendationOrder(selectionId, sortOrder) {
+    try {
+      const url = getApiUrl(`/explore-selections/${selectionId}`)
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          sort_order: sortOrder
+        }),
+      })
+      return await response.json()
+    } catch (error) {
+      throw new Error(`更新精品推荐排序失败: ${error.message}`)
+    }
+  },
+
+  // 从精品推荐中移除商品
+  async removeFromFeaturedRecommendations(selectionId) {
+    try {
+      const url = getApiUrl(`/explore-selections/${selectionId}`)
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      })
+      return await response.json()
+    } catch (error) {
+      throw new Error(`移除精品推荐失败: ${error.message}`)
+    }
+  }
+}
+
+// 主推商品相关 API 函数
+export const mainPromotionsApi = {
+  // 获取主推商品列表
+  async getMainPromotions() {
+    try {
+      const url = getApiUrl('/main-promotions')
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      })
+      
+      // 检查响应状态
+      if (!response.ok) {
+        throw new Error(`HTTP错误: ${response.status}`)
+      }
+      
+      // 检查响应内容类型
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('服务器返回的不是JSON格式数据')
+      }
+      
+      return await response.json()
+    } catch (error) {
+      throw new Error(`获取主推商品列表失败: ${error.message}`)
+    }
+  },
+
+  // 添加商品到主推
+  async addToMainPromotions(productId, sortOrder = 0) {
+    try {
+      const url = getApiUrl('/main-promotions')
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          product_id: productId,
+          sort_order: sortOrder
+        }),
+      })
+      return await response.json()
+    } catch (error) {
+      throw new Error(`添加主推商品失败: ${error.message}`)
+    }
+  },
+
+  // 更新主推商品排序
+  async updateMainPromotionOrder(promotionId, sortOrder) {
+    try {
+      const url = getApiUrl(`/main-promotions/${promotionId}`)
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          sort_order: sortOrder
+        }),
+      })
+      return await response.json()
+    } catch (error) {
+      throw new Error(`更新主推商品排序失败: ${error.message}`)
+    }
+  },
+
+  // 从主推中移除商品
+  async removeFromMainPromotions(promotionId) {
+    try {
+      const url = getApiUrl(`/main-promotions/${promotionId}`)
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      })
+      return await response.json()
+    } catch (error) {
+      throw new Error(`移除主推商品失败: ${error.message}`)
     }
   }
 }

@@ -1,3 +1,6 @@
+// 导入Vue的ref函数
+import { ref } from 'vue'
+
 // 认证状态管理
 class AuthManager {
   constructor() {
@@ -83,7 +86,6 @@ class AuthManager {
 }
 
 // 创建全局认证实例
-import { ref } from 'vue'
 export const authManager = new AuthManager()
 
 // 导出组合式函数
