@@ -1,8 +1,16 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h1>主推款式</h1>
-      <p>管理和展示主推商品款式</p>
+      <div class="header-left">
+        <h1>主推款式</h1>
+        <p>管理和展示主推商品款式</p>
+      </div>
+      <div class="header-right">
+        <el-button type="primary" @click="openProductSelectionDialog">
+          <el-icon><Plus /></el-icon>
+          添加主推款式
+        </el-button>
+      </div>
     </div>
     <div class="page-content">
       <!-- 加载状态 -->
@@ -41,58 +49,55 @@
         <el-icon class="empty-icon"><TrendCharts /></el-icon>
         <h3>暂无主推商品</h3>
         <p>还没有设置主推商品，请先添加商品</p>
-        <el-button type="primary">添加主推商品</el-button>
+        <el-button type="primary" @click="openProductSelectionDialog">添加主推商品</el-button>
       </div>
     </div>
+
+    <!-- 商品选择弹窗 -->
+    <ProductSelectionDialog
+      v-model="productSelectionDialogVisible"
+      title="选择主推商品"
+      :products="allProducts"
+      :categories="categories"
+      :loading="productSelectionLoading"
+      :enable-pagination="true"
+      :exclude-product-ids="existingProductIds"
+      :confirm-loading="confirmLoading"
+      @confirm="handleConfirmSelection"
+      @cancel="handleCancelSelection"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   TrendCharts, 
   Loading, 
-  Warning
+  Warning,
+  Plus
 } from '@element-plus/icons-vue'
 import ProductCard from '@/components/ProductCard.vue'
-import { mainPromotionsApi, getImageUrl } from '@/config/api.js'
+import ProductSelectionDialog from '@/components/ProductSelectionDialog.vue'
+import { mainPromotionsApi, productApi, categoryApi, getImageUrl } from '@/config/api.js'
 
 // 响应式数据
 const loading = ref(false)
 const error = ref('')
 const promotions = ref([])
 
-// 模拟数据（当API不可用时使用）
-const mockPromotions = [
-  {
-    promotion_id: 1,
-    product_name: "经典白衬衫",
-    product_description: "简约百搭的经典白衬衫，采用优质棉质面料，版型修身，适合各种场合穿着。",
-    product_price: 299.00,
-    category_name: "衬衫",
-    product_tags: "经典,百搭,棉质,修身",
-    main_image: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=400&h=400&fit=crop&auto=format"
-  },
-  {
-    promotion_id: 2,
-    product_name: "休闲牛仔裤",
-    product_description: "舒适耐穿的休闲牛仔裤，经典直筒版型，深蓝色调，搭配任何上衣都很好看。",
-    product_price: 399.00,
-    category_name: "裤子",
-    product_tags: "休闲,经典,直筒,深蓝",
-    main_image: "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=400&h=400&fit=crop&auto=format"
-  },
-  {
-    promotion_id: 3,
-    product_name: "时尚风衣",
-    product_description: "优雅时尚的中长款风衣，防风防水面料，经典双排扣设计，彰显都市女性魅力。",
-    product_price: 899.00,
-    category_name: "外套",
-    product_tags: "时尚,风衣,防水,双排扣",
-    main_image: "https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=400&h=400&fit=crop&auto=format"
-  }
-]
+// 商品选择弹窗相关数据
+const productSelectionDialogVisible = ref(false)
+const productSelectionLoading = ref(false)
+const allProducts = ref([])
+const categories = ref([])
+const confirmLoading = ref(false)
+
+// 计算属性 - 已存在的商品ID（用于排除）
+const existingProductIds = computed(() => {
+  return promotions.value.map(p => p.product_id)
+})
 
 // 获取主推商品列表
 const fetchPromotions = async () => {
@@ -104,16 +109,14 @@ const fetchPromotions = async () => {
     
     if (result.success) {
       promotions.value = result.data.promotions || []
-      ElMessage.success(result.message || '获取主推商品列表成功')
     } else {
-      throw new Error(result.message || '获取主推商品列表失败')
+      error.value = result.message || '获取主推商品列表失败'
+      ElMessage.error(error.value)
     }
   } catch (err) {
-    console.warn('API调用失败，使用模拟数据:', err.message)
-    
-    // API失败时使用模拟数据
-    promotions.value = mockPromotions
-    ElMessage.warning('使用演示数据，实际部署时请配置正确的API接口')
+    console.error('API调用失败:', err.message)
+    error.value = err.message || '获取主推商品列表失败'
+    ElMessage.error(error.value)
   } finally {
     loading.value = false
   }
@@ -150,7 +153,11 @@ const moveDown = async (index) => {
 // 更新排序
 const updateSortOrder = async (newPromotions) => {
   try {
-    // 这里可以调用API更新排序，暂时只更新本地状态
+    const updatePromises = newPromotions.map((promotion, index) => 
+      mainPromotionsApi.updateMainPromotionOrder(promotion.promotion_id, index)
+    )
+    
+    await Promise.all(updatePromises)
     promotions.value = newPromotions
     ElMessage.success('排序更新成功')
   } catch (error) {
@@ -169,15 +176,116 @@ const removePromotion = async (promotionId) => {
       type: 'warning'
     })
     
-    // 这里可以调用API移除商品，暂时只更新本地状态
-    promotions.value = promotions.value.filter(p => p.promotion_id !== promotionId)
-    ElMessage.success('移除成功')
+    const response = await mainPromotionsApi.removeFromMainPromotions(promotionId)
+    
+    if (response.success) {
+      ElMessage.success('移除成功')
+      await fetchPromotions() // 重新加载数据
+    } else {
+      ElMessage.error(response.message || '移除失败')
+    }
   } catch (error) {
     if (error !== 'cancel') {
       console.error('移除主推商品失败:', error)
       ElMessage.error('移除失败: ' + error.message)
     }
   }
+}
+
+// 打开商品选择弹窗
+const openProductSelectionDialog = async () => {
+  productSelectionDialogVisible.value = true
+  
+  // 加载商品和分类数据
+  await Promise.all([
+    loadAllProducts(),
+    loadCategories()
+  ])
+}
+
+// 加载所有商品（用于筛选）
+const loadAllProducts = async () => {
+  try {
+    productSelectionLoading.value = true
+    allProducts.value = []
+    
+    // 分页获取所有商品
+    let page = 1
+    let hasMore = true
+    
+    while (hasMore) {
+      const response = await productApi.getProducts(page, 100) // 每页100个商品
+      
+      if (response.success) {
+        const products = response.data.products || []
+        allProducts.value.push(...products)
+        
+        // 如果返回的商品数量少于100，说明已经是最后一页
+        hasMore = products.length === 100
+        page++
+      } else {
+        ElMessage.error(response.message || '获取商品列表失败')
+        break
+      }
+    }
+  } catch (error) {
+    console.error('获取商品列表失败:', error)
+    ElMessage.error('获取商品列表失败: ' + error.message)
+  } finally {
+    productSelectionLoading.value = false
+  }
+}
+
+// 加载分类数据
+const loadCategories = async () => {
+  try {
+    const response = await categoryApi.getCategories()
+    if (response.success) {
+      categories.value = response.data || []
+    }
+  } catch (error) {
+    console.error('获取分类列表失败:', error)
+  }
+}
+
+// 处理确认选择
+const handleConfirmSelection = async (selectedProductIds) => {
+  if (selectedProductIds.length === 0) {
+    ElMessage.warning('请选择要添加的商品')
+    return
+  }
+
+  try {
+    confirmLoading.value = true
+    
+    // 批量添加商品到主推，从当前主推数量开始排序
+    const addPromises = selectedProductIds.map((productId, index) => 
+      mainPromotionsApi.addToMainPromotions(productId, promotions.value.length + index)
+    )
+    
+    const results = await Promise.all(addPromises)
+    
+    // 检查是否有失败的
+    const failed = results.filter(r => !r.success)
+    if (failed.length > 0) {
+      ElMessage.warning(`成功添加 ${selectedProductIds.length - failed.length} 个商品，${failed.length} 个商品添加失败`)
+    } else {
+      ElMessage.success(`成功添加 ${selectedProductIds.length} 个商品到主推款式`)
+    }
+    
+    productSelectionDialogVisible.value = false
+    await fetchPromotions() // 重新加载数据
+  } catch (error) {
+    console.error('添加主推商品失败:', error)
+    ElMessage.error('添加失败: ' + error.message)
+  } finally {
+    confirmLoading.value = false
+  }
+}
+
+// 处理取消选择
+const handleCancelSelection = () => {
+  // 可以在这里处理取消逻辑，如果需要的话
 }
 
 // 组件挂载时获取数据
@@ -199,6 +307,18 @@ onMounted(() => {
   padding: 20px;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-left {
+  flex: 1;
+}
+
+.header-right {
+  display: flex;
+  gap: 12px;
 }
 
 .page-header h1 {
@@ -274,8 +394,8 @@ onMounted(() => {
 /* 商品卡片网格布局 */
 .products-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 12px;
   padding: 16px 0;
 }
 
@@ -341,6 +461,41 @@ onMounted(() => {
   .products-grid {
     grid-template-columns: 1fr;
     gap: 12px;
+  }
+}
+
+/* 响应式设计 - 主页面商品网格 */
+@media (max-width: 1600px) {
+  .products-grid {
+    grid-template-columns: repeat(8, 1fr);
+  }
+}
+
+@media (max-width: 1200px) {
+  .products-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .products-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .products-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .header-right {
+    width: 100%;
   }
 }
 </style>

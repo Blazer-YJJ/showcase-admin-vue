@@ -46,111 +46,30 @@
     </div>
 
     <!-- 商品选择弹窗 -->
-    <el-dialog
+    <ProductSelectionDialog
       v-model="productSelectionDialogVisible"
       title="选择推荐商品"
-      width="80%"
-      :close-on-click-modal="false"
-      class="product-selection-dialog"
-    >
-      <!-- 筛选区域 -->
-      <div class="filter-section">
-        <el-form :model="filterForm" inline>
-          <el-form-item label="商品名称">
-            <el-input
-              v-model="filterForm.name"
-              placeholder="请输入商品名称"
-              clearable
-              style="width: 200px"
-              @input="handleFilterChange"
-            />
-          </el-form-item>
-          <el-form-item label="分类">
-            <el-select
-              v-model="filterForm.category_id"
-              placeholder="请选择分类"
-              clearable
-              style="width: 200px"
-              @change="handleFilterChange"
-            >
-              <el-option label="全部分类" value="" />
-              <el-option
-                v-for="category in categories"
-                :key="category.category_id"
-                :label="category.name"
-                :value="category.category_id"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item>
-            <el-button @click="resetFilter">
-              <el-icon><Refresh /></el-icon>
-              重置
-            </el-button>
-          </el-form-item>
-        </el-form>
-      </div>
-
-      <!-- 商品列表 -->
-      <div class="product-selection-content">
-        <div v-if="productSelectionLoading" class="loading-container">
-          <el-icon class="loading-icon"><Loading /></el-icon>
-          <p>正在加载商品...</p>
-        </div>
-        
-        <div v-else-if="filteredProducts.length > 0" class="products-grid">
-          <ProductSelectionCard
-            v-for="product in filteredProducts"
-            :key="product.product_id"
-            :product="product"
-            :selected="selectedProductIds.includes(product.product_id)"
-            :categories="categories"
-            @select="handleProductSelect"
-            @unselect="handleProductUnselect"
-          />
-        </div>
-        
-        <div v-else class="empty-content">
-          <el-icon class="empty-icon"><Box /></el-icon>
-          <h3>暂无商品</h3>
-          <p>没有找到符合条件的商品</p>
-        </div>
-      </div>
-
-      <template #footer>
-        <div class="dialog-footer">
-          <div class="selection-info">
-            已选择 {{ selectedProductIds.length }} 个商品
-          </div>
-          <div class="footer-buttons">
-            <el-button @click="productSelectionDialogVisible = false">取消</el-button>
-            <el-button 
-              type="primary" 
-              @click="confirmSelection"
-              :disabled="selectedProductIds.length === 0"
-            >
-              确定添加 ({{ selectedProductIds.length }})
-            </el-button>
-          </div>
-        </div>
-      </template>
-    </el-dialog>
+      :products="allProducts"
+      :categories="categories"
+      :loading="productSelectionLoading"
+      :enable-pagination="false"
+      @confirm="handleConfirmSelection"
+      @cancel="handleCancelSelection"
+    />
 
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   Trophy, 
   Loading,
-  Plus,
-  Refresh,
-  Box
+  Plus
 } from '@element-plus/icons-vue'
 import ProductCard from '@/components/ProductCard.vue'
-import ProductSelectionCard from '@/components/ProductSelectionCard.vue'
+import ProductSelectionDialog from '@/components/ProductSelectionDialog.vue'
 import { featuredRecommendationsApi, productApi, categoryApi, getImageUrl } from '@/config/api.js'
 
 // 响应式数据
@@ -162,32 +81,6 @@ const productSelectionDialogVisible = ref(false)
 const productSelectionLoading = ref(false)
 const allProducts = ref([])
 const categories = ref([])
-const selectedProductIds = ref([])
-const filterForm = ref({
-  name: '',
-  category_id: ''
-})
-
-// 计算属性
-const filteredProducts = computed(() => {
-  let products = allProducts.value
-
-  // 按名称筛选
-  if (filterForm.value.name) {
-    products = products.filter(product => 
-      product.name.toLowerCase().includes(filterForm.value.name.toLowerCase())
-    )
-  }
-
-  // 按分类筛选
-  if (filterForm.value.category_id) {
-    products = products.filter(product => 
-      product.category_id === filterForm.value.category_id
-    )
-  }
-
-  return products
-})
 
 // 加载数据
 const loadData = async () => {
@@ -283,7 +176,6 @@ const updateSortOrder = async (newSelections) => {
 // 打开商品选择弹窗
 const openProductSelectionDialog = async () => {
   productSelectionDialogVisible.value = true
-  selectedProductIds.value = []
   
   // 加载商品和分类数据
   await Promise.all([
@@ -337,51 +229,22 @@ const loadCategories = async () => {
   }
 }
 
-// 处理商品选择
-const handleProductSelect = (productId) => {
-  if (!selectedProductIds.value.includes(productId)) {
-    selectedProductIds.value.push(productId)
-  }
-}
-
-// 处理商品取消选择
-const handleProductUnselect = (productId) => {
-  const index = selectedProductIds.value.indexOf(productId)
-  if (index > -1) {
-    selectedProductIds.value.splice(index, 1)
-  }
-}
-
-// 处理筛选变化
-const handleFilterChange = () => {
-  // 筛选变化时自动触发计算属性更新
-}
-
-// 重置筛选
-const resetFilter = () => {
-  filterForm.value = {
-    name: '',
-    category_id: ''
-  }
-}
-
-// 确认选择
-const confirmSelection = async () => {
-  if (selectedProductIds.value.length === 0) {
+// 处理确认选择
+const handleConfirmSelection = async (selectedProductIds) => {
+  if (selectedProductIds.length === 0) {
     ElMessage.warning('请选择要添加的商品')
     return
   }
 
   try {
     const response = await featuredRecommendationsApi.addMultipleToFeaturedRecommendations(
-      selectedProductIds.value,
+      selectedProductIds,
       selections.value.length // 从当前推荐数量开始排序
     )
     
     if (response.success) {
-      ElMessage.success(`成功添加 ${selectedProductIds.value.length} 个商品到精品推荐`)
+      ElMessage.success(`成功添加 ${selectedProductIds.length} 个商品到精品推荐`)
       productSelectionDialogVisible.value = false
-      selectedProductIds.value = []
       await loadData() // 重新加载数据
     } else {
       ElMessage.error(response.message || '添加失败')
@@ -390,6 +253,11 @@ const confirmSelection = async () => {
     console.error('添加精品推荐失败:', error)
     ElMessage.error('添加失败: ' + error.message)
   }
+}
+
+// 处理取消选择
+const handleCancelSelection = () => {
+  // 可以在这里处理取消逻辑，如果需要的话
 }
 
 // 组件挂载时加载数据
@@ -429,60 +297,6 @@ onMounted(() => {
   font-size: 14px;
 }
 
-/* 商品选择弹窗样式 */
-.product-selection-dialog :deep(.el-dialog) {
-  border-radius: 12px;
-}
-
-.product-selection-dialog :deep(.el-dialog__header) {
-  padding: 20px 20px 0 20px;
-  border-bottom: 1px solid #e4e7ed;
-}
-
-.product-selection-dialog :deep(.el-dialog__body) {
-  padding: 20px;
-  max-height: 60vh;
-  overflow-y: auto;
-}
-
-.product-selection-dialog :deep(.el-dialog__footer) {
-  padding: 0 20px 20px 20px;
-  border-top: 1px solid #e4e7ed;
-}
-
-.filter-section {
-  margin-bottom: 20px;
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 8px;
-}
-
-.product-selection-content {
-  min-height: 300px;
-}
-
-.products-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
-  padding: 16px 0;
-}
-
-.dialog-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.selection-info {
-  color: #606266;
-  font-size: 14px;
-}
-
-.footer-buttons {
-  display: flex;
-  gap: 12px;
-}
 
 .page-content {
   height: calc(100% - 120px);
@@ -546,40 +360,33 @@ onMounted(() => {
 /* 商品卡片网格布局 */
 .selections-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 12px;
   padding: 16px 0;
 }
 
 /* 响应式设计 */
+@media (max-width: 1600px) {
+  .selections-grid {
+    grid-template-columns: repeat(8, 1fr);
+  }
+}
+
 @media (max-width: 1200px) {
   .selections-grid {
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(6, 1fr);
   }
 }
 
-@media (max-width: 768px) {
-  .page-container {
-    padding: 12px;
-  }
-  
+@media (max-width: 900px) {
   .selections-grid {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 12px;
-    padding: 12px 0;
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .selections-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-  
-  .products-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(2, 1fr);
   }
   
   .page-header {
@@ -607,3 +414,4 @@ onMounted(() => {
   background: linear-gradient(135deg, #66b3ff 0%, #409eff 100%);
 }
 </style>
+

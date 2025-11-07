@@ -21,15 +21,8 @@
     <!-- 商品信息 -->
     <div class="card-content">
       <h3 class="product-name">{{ product.product_name }}</h3>
-      <p class="product-description">{{ product.product_description }}</p>
-      
-      <div class="product-meta">
-        <div class="price">¥{{ product.product_price }}</div>
-        <div class="category">{{ product.category_name }}</div>
-      </div>
-      
-      <div class="product-tags" v-if="product.product_tags">
-        <el-tag size="small" type="info">{{ product.product_tags }}</el-tag>
+      <div class="product-category">
+        <el-tag size="small" type="info">{{ product.category_name || '未分类' }}</el-tag>
       </div>
     </div>
     
@@ -115,6 +108,12 @@ const handleImageError = (event) => {
   overflow: hidden;
   transition: all 0.3s ease;
   position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0; /* 允许内容收缩 */
+  height: 220px; /* 固定高度 */
+  display: flex;
+  flex-direction: column;
 }
 
 .product-card:hover {
@@ -126,15 +125,16 @@ const handleImageError = (event) => {
 .card-image {
   position: relative;
   width: 100%;
-  height: 140px;
+  height: 120px;
   overflow: hidden;
   background-color: #f5f5f5;
+  flex-shrink: 0; /* 图片区域不收缩 */
 }
 
 .card-image img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   transition: transform 0.3s ease;
 }
 
@@ -168,56 +168,51 @@ const handleImageError = (event) => {
 /* 卡片内容区域 */
 .card-content {
   padding: 12px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* 允许内容收缩 */
 }
 
 .product-name {
-  margin: 0 0 6px 0;
+  margin: 0 0 8px 0;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   color: #303133;
-  line-height: 1.3;
+  line-height: 1.4;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
 }
 
 .product-description {
-  margin: 0 0 8px 0;
-  font-size: 12px;
-  color: #606266;
-  line-height: 1.3;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  display: none;
 }
 
 .product-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
+  display: none;
 }
 
 .price {
-  font-size: 14px;
-  font-weight: 700;
-  color: #f56c6c;
+  display: none;
 }
 
 .category {
-  font-size: 10px;
-  color: #409eff;
-  background-color: #f0f9ff;
-  padding: 2px 6px;
-  border-radius: 3px;
+  display: none;
 }
 
 .product-tags {
-  margin-bottom: 8px;
+  display: none;
+}
+
+.product-category {
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
 }
 
 /* 卡片操作区域 */
@@ -225,27 +220,28 @@ const handleImageError = (event) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
+  padding: 6px 12px;
   background-color: #fafafa;
   border-top: 1px solid #e4e7ed;
 }
 
+
 .sort-controls {
   display: flex;
-  gap: 6px;
+  gap: 4px;
 }
 
 .sort-controls .el-button {
   padding: 4px 6px;
   min-height: auto;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .card-actions .el-button--danger {
   padding: 4px 6px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 /* 响应式设计 */

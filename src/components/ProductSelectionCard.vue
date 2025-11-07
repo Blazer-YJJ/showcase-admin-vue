@@ -13,7 +13,7 @@
     <div class="product-info">
       <h4 class="product-name">{{ product.name }}</h4>
       <div class="product-category">
-        <el-tag size="small" type="info">{{ getCategoryName(product.category_id) }}</el-tag>
+        <el-tag size="small" type="info">{{ product.category_name || '未分类' }}</el-tag>
       </div>
     </div>
   </div>
@@ -53,11 +53,6 @@ const toggleSelection = () => {
 
 const handleImageError = (event) => {
   event.target.src = '/src/assets/default-product.png'
-}
-
-const getCategoryName = (categoryId) => {
-  const category = props.categories.find(cat => cat.category_id === categoryId)
-  return category ? category.name : '未分类'
 }
 
 // 获取商品主图片URL
@@ -109,7 +104,8 @@ const getMainImageUrl = (product) => {
 .product-image img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  background-color: #f5f5f5;
   transition: transform 0.3s ease;
 }
 

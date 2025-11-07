@@ -7,6 +7,10 @@
         <p>管理商品信息、库存和分类</p>
       </div>
       <div class="header-right">
+        <el-button type="success" @click="openBatchUploadDialog">
+          <el-icon><UploadFilled /></el-icon>
+          批量上传
+        </el-button>
         <el-button type="primary" @click="openAddDialog">
           <el-icon><Plus /></el-icon>
           添加商品
@@ -441,6 +445,93 @@
       </template>
     </el-dialog>
 
+    <!-- 批量上传弹窗 -->
+    <el-dialog
+      v-model="batchUploadDialogVisible"
+      title="批量上传商品"
+      width="900px"
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
+    >
+      <el-form
+        ref="batchUploadFormRef"
+        :model="batchUploadForm"
+        :rules="batchUploadFormRules"
+        label-width="100px"
+        label-position="left"
+      >
+        <el-form-item label="分类" prop="category_id">
+          <el-cascader
+            v-model="batchUploadForm.category_id"
+            :options="categoryTree"
+            :props="cascaderProps"
+            placeholder="请选择分类（必填）"
+            style="width: 100%"
+            clearable
+            filterable
+          />
+        </el-form-item>
+        
+        <el-form-item label="标签" prop="tags">
+          <el-input
+            v-model="batchUploadForm.tags"
+            placeholder="请输入标签（非必填，用逗号分隔）"
+            clearable
+          />
+        </el-form-item>
+
+        <el-form-item label="商品图片" prop="images">
+          <el-upload
+            ref="batchUploadRef"
+            :file-list="batchUploadFileList"
+            :auto-upload="false"
+            :on-change="handleBatchFileChange"
+            :on-remove="handleBatchFileRemove"
+            :before-upload="beforeBatchUpload"
+            :limit="100"
+            multiple
+            drag
+            accept="image/*"
+            list-type="picture-card"
+            class="batch-upload-demo"
+          >
+            <el-icon class="el-icon--upload"><upload-filled /></el-icon>
+            <div class="el-upload__text">
+              将文件拖到此处，或<em>点击上传</em>
+            </div>
+            <template #tip>
+              <div class="el-upload__tip">
+                支持jpg/png格式，单个文件不超过5MB，最多上传100张图片。图片名称将作为商品名称。
+              </div>
+            </template>
+          </el-upload>
+          
+          <div v-if="batchUploadFileList.length > 0" class="batch-upload-info">
+            <el-alert
+              :title="`已选择 ${batchUploadFileList.length} 张图片`"
+              type="info"
+              :closable="false"
+              show-icon
+            />
+          </div>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="closeBatchUploadDialog">取消</el-button>
+          <el-button 
+            type="primary" 
+            @click="submitBatchUpload" 
+            :loading="batchUploadLoading"
+            :disabled="batchUploadFileList.length === 0"
+          >
+            确定上传
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
+
     <!-- 编辑商品弹窗 -->
     <el-dialog
       v-model="editDialogVisible"
@@ -648,6 +739,13 @@ const editSubmitLoading = ref(false)
 const editFileList = ref([])
 const currentEditProduct = ref(null)
 
+// 批量上传弹窗相关
+const batchUploadDialogVisible = ref(false)
+const batchUploadFormRef = ref()
+const batchUploadRef = ref()
+const batchUploadLoading = ref(false)
+const batchUploadFileList = ref([])
+
 // 搜索表单
 const searchForm = reactive({
   name: '',
@@ -710,6 +808,19 @@ const editFormRules = {
   ],
   price: [
     { type: 'number', min: 0, message: '价格必须大于等于0', trigger: 'blur' }
+  ]
+}
+
+// 批量上传表单
+const batchUploadForm = reactive({
+  category_id: null,
+  tags: ''
+})
+
+// 批量上传表单验证规则
+const batchUploadFormRules = {
+  category_id: [
+    { required: true, message: '请选择分类', trigger: 'change' }
   ]
 }
 
@@ -1197,12 +1308,114 @@ const formatDateTime = (dateTime) => {
     second: '2-digit'
   })
 }
+
+// 打开批量上传对话框
+const openBatchUploadDialog = () => {
+  resetBatchUploadForm()
+  batchUploadDialogVisible.value = true
+}
+
+// 关闭批量上传对话框
+const closeBatchUploadDialog = () => {
+  batchUploadDialogVisible.value = false
+  resetBatchUploadForm()
+}
+
+// 重置批量上传表单
+const resetBatchUploadForm = () => {
+  batchUploadForm.category_id = null
+  batchUploadForm.tags = ''
+  batchUploadFileList.value = []
+  
+  // 清除表单验证
+  if (batchUploadFormRef.value) {
+    batchUploadFormRef.value.clearValidate()
+  }
+  
+  // 清除上传组件
+  if (batchUploadRef.value) {
+    batchUploadRef.value.clearFiles()
+  }
+}
+
+// 批量上传文件验证
+const beforeBatchUpload = (file) => {
+  const isImage = file.type.startsWith('image/')
+  const isLt5M = file.size / 1024 / 1024 < 5
+
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件!')
+    return false
+  }
+  if (!isLt5M) {
+    ElMessage.error('图片大小不能超过 5MB!')
+    return false
+  }
+  if (batchUploadFileList.value.length >= 100) {
+    ElMessage.error('最多只能上传100张图片!')
+    return false
+  }
+  return true
+}
+
+// 批量上传文件变化处理
+const handleBatchFileChange = (file, fileListParam) => {
+  // 更新fileList
+  batchUploadFileList.value = fileListParam
+}
+
+// 批量上传文件移除处理
+const handleBatchFileRemove = (file, fileListParam) => {
+  // 更新fileList
+  batchUploadFileList.value = fileListParam
+}
+
+// 提交批量上传
+const submitBatchUpload = async () => {
+  try {
+    // 表单验证
+    await batchUploadFormRef.value.validate()
+    
+    // 检查是否选择了图片
+    if (batchUploadFileList.value.length === 0) {
+      ElMessage.warning('请至少选择一张图片')
+      return
+    }
+    
+    batchUploadLoading.value = true
+    
+    // 准备批量上传数据
+    const batchData = {
+      category_id: Array.isArray(batchUploadForm.category_id) 
+        ? batchUploadForm.category_id[batchUploadForm.category_id.length - 1] 
+        : batchUploadForm.category_id,
+      tags: batchUploadForm.tags || '',
+      images: batchUploadFileList.value.map(file => file.raw)
+    }
+    
+    // 发送请求
+    const response = await productApi.batchCreateProducts(batchData)
+    
+    if (response.success) {
+      ElMessage.success(`成功批量创建 ${response.data?.created_count || batchUploadFileList.value.length} 个商品`)
+      closeBatchUploadDialog()
+      loadProductList() // 刷新列表
+    } else {
+      ElMessage.error(response.message || '批量上传失败')
+    }
+  } catch (error) {
+    console.error('批量上传错误:', error)
+    ElMessage.error(error.message || '批量上传失败')
+  } finally {
+    batchUploadLoading.value = false
+  }
+}
 </script>
 
 <style scoped>
 .page-container {
   padding: 20px;
-  height: 100%;
+  min-height: 100%;
   background-color: #f5f5f5;
 }
 
@@ -1241,7 +1454,6 @@ const formatDateTime = (dateTime) => {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  height: calc(100% - 100px);
 }
 
 /* 搜索卡片样式 */
@@ -1256,7 +1468,6 @@ const formatDateTime = (dateTime) => {
 
 /* 表格卡片样式 */
 .table-card {
-  flex: 1;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   display: flex;
@@ -1264,7 +1475,6 @@ const formatDateTime = (dateTime) => {
 }
 
 .table-card :deep(.el-card__body) {
-  flex: 1;
   display: flex;
   flex-direction: column;
   padding: 0;
@@ -1272,7 +1482,7 @@ const formatDateTime = (dateTime) => {
 
 /* 表格样式 */
 .table-card :deep(.el-table) {
-  flex: 1;
+  width: 100%;
 }
 
 .table-card :deep(.el-table__header) {
@@ -1430,6 +1640,30 @@ const formatDateTime = (dateTime) => {
 .upload-demo :deep(.el-upload--picture-card) {
   width: 100px;
   height: 100px;
+}
+
+.batch-upload-demo {
+  width: 100%;
+}
+
+.batch-upload-demo :deep(.el-upload-dragger) {
+  width: 100%;
+  height: 120px;
+}
+
+.batch-upload-demo :deep(.el-upload-list--picture-card) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.batch-upload-demo :deep(.el-upload--picture-card) {
+  width: 100px;
+  height: 100px;
+}
+
+.batch-upload-info {
+  margin-top: 16px;
 }
 
 .dialog-footer {
